@@ -46,7 +46,7 @@ jobs:
 
   manual-apply:
     runs-on: ubuntu-latest
-    environment: production
+    # environment: production
     needs: terraform
     if: github.event_name == 'workflow_dispatch'
     steps:
