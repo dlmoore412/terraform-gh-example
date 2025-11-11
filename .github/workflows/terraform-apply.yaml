@@ -38,7 +38,7 @@ jobs:
         env:
           PLAN_BUCKET: tf-oidc-11-2025
         run: |
-          aws s3 cp s3://$PLAN_BUCKET/${ github.event.inputs.plan_key } terraform/tfplan
+          aws s3 cp s3://${{ env.PLAN_BUCKET }}/${{ github.event.inputs.plan_key }} terraform/tfplan
           ls -l terraform/tfplan || true
 
       - name: Terraform Apply
