@@ -1,0 +1,45 @@
+
+name: Terraform Apply (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      plan_key:
+        description: 'S3 key for the Terraform plan to apply (e.g. plans/tfplan-1234567890)'
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::805063697151:role/github-actions-terraform-deploy-terraform-oidc-gh
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        run: terraform -chdir=terraform init -input=false
+
+      - name: Download Plan from S3
+        env:
+          PLAN_BUCKET: tf-oidc-11-2025
+        run: |
+          aws s3 cp s3://$PLAN_BUCKET/${ github.event.inputs.plan_key } terraform/tfplan
+          ls -l terraform/tfplan || true
+
+      - name: Terraform Apply
+        run: terraform -chdir=terraform apply -input=false terraform/tfplan

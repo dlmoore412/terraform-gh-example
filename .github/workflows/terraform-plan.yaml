@@ -1,0 +1,51 @@
+
+name: Terraform Plan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::805063697151:role/github-actions-terraform-deploy-terraform-oidc-gh
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        run: terraform -chdir=terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform -chdir=terraform validate
+
+      - name: Terraform Plan
+        run: terraform -chdir=terraform plan -input=false -out=tfplan
+
+      - name: Upload Plan to S3
+        env:
+          PLAN_BUCKET: tf-oidc-11-2025
+          PLAN_KEY_PREFIX: plans/
+        run: |
+          ts=$(date +%s)
+          mkdir -p terraform/out
+          # Save the binary plan file to a temporary file for upload
+          cp terraform/tfplan terraform/out/tfplan-$ts
+          aws s3 cp terraform/out/tfplan-$ts s3://$PLAN_BUCKET/$PLAN_KEY_PREFIX/tfplan-$ts
+          echo "plan_key=$PLAN_KEY_PREFIX/tfplan-$ts" >> $GITHUB_OUTPUT
