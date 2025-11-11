@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Terraform remote backend and GitHub Actions OIDC role setup.
+  Creates:
+   - Encrypted S3 bucket for Terraform state
+   - DynamoDB table for state locking
+   - OIDC provider for GitHub Actions
+   - IAM role restricted to a specific repo/branch for OIDC assume role
+
+Parameters:
+  RepoName:
+    Type: String
+    Description: GitHub repository in format org/repo (e.g. your-org/infra-repo)
+  BranchName:
+    Type: String
+    Default: main
+    Description: GitHub branch allowed to assume the AWS OIDC role
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+  BucketName:
+    Type: String
+    Description: Name of the S3 bucket for Terraform state (must be globally unique)
+
+Resources:
+  #######################################
+  # S3 Bucket for Terraform State
+  #######################################
+  TerraformStateBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  TerraformStateBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref TerraformStateBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyPublicAccess
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub "${TerraformStateBucket.Arn}"
+              - !Sub "${TerraformStateBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+  #######################################
+  # DynamoDB Table for State Locking
+  #######################################
+  TerraformLockTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${BucketName}-tf-locks"
+      AttributeDefinitions:
+        - AttributeName: LockID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: LockID
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  #######################################
+  # GitHub OIDC Provider
+  #######################################
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: "https://token.actions.githubusercontent.com"
+      ClientIdList:
+        - "sts.amazonaws.com"
+      ThumbprintList:
+        - "6938fd4d98bab03faadb97b34396831e3780aea1"  # GitHub Actions OIDC thumbprint
+
+  #######################################
+  # IAM Role for GitHub Actions OIDC
+  #######################################
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "github-actions-terraform-deploy-${AWS::StackName}"
+      Description: Role assumed by GitHub Actions via OIDC for Terraform deployments.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOIDCProvider
+            Action: "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: "sts.amazonaws.com"
+                token.actions.githubusercontent.com:sub: !Sub "repo:${RepoName}:ref:refs/heads/${BranchName}"
+
+      Policies:
+        - PolicyName: TerraformBackendAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # S3 backend access
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "s3:ListBucket"
+                  - "s3:DeleteObject"
+                Resource:
+                  - !Sub "${TerraformStateBucket.Arn}"
+                  - !Sub "${TerraformStateBucket.Arn}/*"
+              # DynamoDB lock access
+              - Effect: Allow
+                Action:
+                  - "dynamodb:GetItem"
+                  - "dynamodb:PutItem"
+                  - "dynamodb:DeleteItem"
+                  - "dynamodb:UpdateItem"
+                Resource: !Sub "arn:aws:dynamodb:${AwsRegion}:${AWS::AccountId}:table/${BucketName}-tf-locks"
+              # KMS decrypt if using SSE-KMS in future
+              - Effect: Allow
+                Action:
+                  - "kms:Decrypt"
+                  - "kms:GenerateDataKey*"
+                Resource: "*"
+
+Outputs:
+  TerraformBackendBucket:
+    Description: Terraform S3 Backend Bucket Name
+    Value: !Ref TerraformStateBucket
+
+  TerraformLockTable:
+    Description: Terraform DynamoDB Lock Table
+    Value: !Ref TerraformLockTable
+
+  GitHubOIDCRoleArn:
+    Description: IAM Role ARN to use in GitHub Actions (role-to-assume)
+    Value: !GetAtt GitHubActionsRole.Arn
