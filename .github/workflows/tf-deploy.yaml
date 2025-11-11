@@ -16,9 +16,9 @@ jobs:
       contents: read
       pull-requests: write
 
-    defaults:
-      run:
-        working-directory: environments/dev
+    # defaults:
+    #   run:
+    #     working-directory: environments/dev
 
     steps:
       - name: 'Checkout Code'
@@ -92,9 +92,9 @@ jobs:
       id-token: write
       contents: read
 
-    defaults:
-      run:
-        working-directory: environments/dev
+    # defaults:
+    #   run:
+    #     working-directory: environments/dev
 
     steps:
       - name: 'Checkout Code'
