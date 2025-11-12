@@ -13,7 +13,7 @@ permissions:
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    # environment: dev
+    environment: dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,8 +21,8 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::805063697151:role/github-actions-terraform-deploy-terraform-oidc-gh
-          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -52,8 +52,8 @@ jobs:
       #     issue-body: "Review the terraform plan, then approve or deny the deployment of v1.0.0 to dev."
       #     exclude-workflow-initiator-as-approver: false
       - name: Terraform apply
-        run: |
-          terraform apply
+        - name: Terraform Apply
+#         run: terraform -chdir=terraform apply -input=false terraform/tfplan
 
   # manual-apply:
   #   runs-on: ubuntu-latest
