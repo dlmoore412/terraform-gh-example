@@ -28,9 +28,21 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.0
+      - id: backend-config
+        uses: amannm/terraform-s3-backend-action@v1
+        with:
+          account-id: "805063697151"
+          region: "us-east-1"
+          role: "arn:aws:iam::805063697151:role/github-actions-terraform-deploy-terraform-oidc-gh"
+          bucket: "tf-oidc-11-2025"
+          key: "demo/terraform.tfstate"
+      - run: |
+          terraform init -backend-config="${{ steps.backend-config.outputs.path }}"
 
-      - name: Terraform Init
-        run: terraform -chdir=terraform init
+      # - name: Terraform Init
+      #   # run: terraform -chdir=terraform init
+      #   run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_NAME }}" -backend-config="key=${{ secrets.TF_STATE_BUCKET_KEY }}" -backend-config="region=${{ vars.TF_VAR_REGION }}" -backend-config="encrypt=true" -backend-config="dynamodb_table=${{ secrets.TF_STATE_DYNAMODB_TABLE }}" -input=false
+
 
       - name: Terraform Validate
         run: terraform -chdir=terraform validate
