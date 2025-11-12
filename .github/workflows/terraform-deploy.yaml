@@ -11,7 +11,7 @@ permissions:
   contents: read
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ROLE: ${{ secrets.AWS_ROLE }}
+  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
 jobs:
   terraform:
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup Terraform
