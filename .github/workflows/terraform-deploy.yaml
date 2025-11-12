@@ -43,14 +43,14 @@ jobs:
       #   with:
       #     name: tfplan
       #     path: terraform/tfplan
-      - uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: dlmoore412
-          minimum-approvals: 1
-          issue-title: "Deploying v1.0.0 to prod"
-          issue-body: "Review the terraform plan, then approve or deny the deployment of v1.0.0 to dev."
-          exclude-workflow-initiator-as-approver: false
+      # - uses: trstringer/manual-approval@v1
+      #   with:
+      #     secret: ${{ github.TOKEN }}
+      #     approvers: dlmoore412
+      #     minimum-approvals: 1
+      #     issue-title: "Deploying v1.0.0 to prod"
+      #     issue-body: "Review the terraform plan, then approve or deny the deployment of v1.0.0 to dev."
+      #     exclude-workflow-initiator-as-approver: false
       - name: Terraform apply
         run: |
           terraform apply
