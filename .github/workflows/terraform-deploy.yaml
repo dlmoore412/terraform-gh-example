@@ -53,9 +53,9 @@ jobs:
       #     issue-title: "Deploying v1.0.0 to prod"
       #     issue-body: "Review the terraform plan, then approve or deny the deployment of v1.0.0 to dev."
       #     exclude-workflow-initiator-as-approver: false
-      - name: Terraform apply
-        - name: Terraform Apply
-#         run: terraform -chdir=terraform apply -input=false terraform/tfplan
+ 
+      - name: Terraform Apply
+        run: terraform -chdir=terraform apply -input=false terraform/tfplan
 
   # manual-apply:
   #   runs-on: ubuntu-latest
