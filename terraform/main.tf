@@ -1,4 +1,4 @@
-# Simple IAM role with read-only permissions
+/*# Simple IAM role with read-only permissions
 resource "aws_iam_role" "demo_readonly_role" {
   name               = "demo-readonly-role"
   assume_role_policy = data.aws_iam_policy_document.assume.json
@@ -21,3 +21,4 @@ resource "aws_iam_role_policy_attachment" "readonly" {
 }
 
 data "aws_caller_identity" "current" {}
+*/
