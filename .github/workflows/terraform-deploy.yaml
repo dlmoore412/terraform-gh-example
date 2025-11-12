@@ -9,11 +9,13 @@ on:
 permissions:
   id-token: write
   contents: read
-
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ROLE: ${{ secrets.AWS_ROLE }}
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    # environment: dev
+    environment: dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,8 +23,9 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "arn:aws:iam::805063697151:role/github-actions-terraform-deploy-terraform-oidc-gh"
-          aws-region: us-east-1
+          env:
+            role-to-assume: ${{ secrets.AWS_REGION }}
+            aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
